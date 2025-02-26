@@ -14,7 +14,7 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 require("dotenv").config();
-const apiKey = process.env.r8_a7NOs5SbWcooarKWjR3fwUMNkfRH48Y0Jk4jP;
+const apiKey = YOUR_API_IN_REPLICATE;
 
 
 
