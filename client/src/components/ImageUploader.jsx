@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import html2canvas from "html2canvas";
 
 function ImageUploader() {
     const [image2, setImage2] = useState(null); // Environment image
@@ -10,7 +11,6 @@ function ImageUploader() {
     // Store multiple draggable images
     const [draggableImages, setDraggableImages] = useState([]);
     const [isIntegrating, setIsIntegrating] = useState(false);  // Track integration status
-    const [statusMessage, setStatusMessage] = useState('');  // Optional: Status message for user feedback
     const PORT = 5051;
 
     const handleFileChange = async (event) => {
@@ -202,48 +202,6 @@ function ImageUploader() {
     const handleDeleteLastImage = () => {
         setDraggableImages((prevImages) => prevImages.slice(0, -1));
     };
-
-
-    const integrateImages = async () => {
-        setIsIntegrating(true);  // Start integration
-        setStatusMessage('Integrating images... Please wait.');
-    
-        try {
-            const response = await fetch(`http://localhost:${PORT}/generate-integrated-image`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    environmentImageUrl: imageUrl2, // The background image URL
-                    imagesData: draggableImages.map(img => ({
-                        imageUrl: img.src,  // Target image URL
-                        position: img.position,  // Position on the playground
-                        width: img.width,  // Width of the target image
-                        height: img.height,  // Height of the target image
-                    })),
-                }),
-            });
-
-            console.log('This is the response', { response });
-    
-            if (!response.ok) {
-                throw new Error('Image integration failed');
-            }
-    
-            const data = await response.json();
-
-            console.log('This is the data', data);
-
-            const integratedImageUrl = data.integratedImageUrl;
-    
-            setIntegratedImageUrl(integratedImageUrl);  // Display the integrated image
-            setStatusMessage('Image integration complete!');
-        } catch (error) {
-            console.error('Error during image integration:', error);
-            setStatusMessage('Image integration failed. Please try again.');
-        } finally {
-            setIsIntegrating(false);  // End integration
-        }
-    };
     
     useEffect(() => {
         if (shouldIntegrate && !isIntegrating) {
@@ -252,7 +210,35 @@ function ImageUploader() {
         }
     }, [shouldIntegrate, isIntegrating]);  // Ensure integration runs when shouldIntegrate is true
         
+    const handleCapturePlayground = async () => {
+        const playground = document.getElementById("playground");
+        if (!playground) return;
+    
+        try {
+            const canvas = await html2canvas(playground, { useCORS: true });
+            const imageDataUrl = canvas.toDataURL("image/png"); // Captures as a Base64 image
+            setIntegratedImageUrl(imageDataUrl); // Store locally
+            await integrateWithAI(imageDataUrl); // Send to AI for blending
 
+            const blob = await (await fetch(imageDataUrl)).blob();
+            const formData = new FormData();
+            formData.append("image", blob, "playground_capture.png");
+    
+            // Send the image to the backend
+            const response = await fetch(`http://localhost:${PORT}/uploads`, {
+                method: "POST",
+                body: formData,
+            });
+    
+            const result = await response.json();
+            console.log("Upload result:", result);
+
+        } catch (error) {
+            console.error("Error capturing playground:", error);
+        }
+
+        
+    };
 
     return (
         <div>
@@ -344,14 +330,11 @@ function ImageUploader() {
                     </div>
                     <button onClick={handleDeleteLastImage}>Delete Last Image</button>
                     <div>
-                        <button
-                        onClick={() => setShouldIntegrate((prev) => !prev)}
-                        disabled={isIntegrating}  // Disable the button while integrating
-                        >
-                            {isIntegrating ? 'Integrating...' : shouldIntegrate ? 'Cancel Integration' : 'Start Integration'}
+                        <button onClick={handleCapturePlayground} disabled={isIntegrating}>
+                            {isIntegrating ? "Integrating..." : "Start AI Integration"}
                         </button>
-                        <p>{statusMessage}</p>  {/* Show status message */}
-                        <img id="integratedImage" style={{ width: '100%', maxWidth: '500px' }} src={integratedImageUrl} alt="Integrated Result" />
+                        <img id="integratedImage" src={integratedImageUrl} alt="Integrated Result" 
+                        style={{ width: '100%', maxWidth: '500px' }} />
                     </div>
                 </div>
             )}
