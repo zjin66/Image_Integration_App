@@ -22,7 +22,7 @@ Appears after the images are uploaded. Contains various features:
   * [ ] Save button for the final integrated image
 ## Requirements
  * React and Express
- * Visual Code Studio
+ * Visual Studio Code 
 ## Installation
 1. Click on the "Code" button and select "Download ZIP" to download the project files to local directory.
 2. Open server.js, App.jsx and cd all the required things such as multer, axios, cors, html2canvas and etc.
